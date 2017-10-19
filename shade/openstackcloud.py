@@ -6212,8 +6212,21 @@ class OpenStackCloud(
             f_ip = self.available_floating_ip()
         else:
             start_time = time.time()
+            # get a floating ip network that doesn't have routes_externally
+            # set to False
+            external_network_found = False
+            for network in self.get_external_ipv4_floating_networks():
+                if network in self.cloud_config.get_internal_networks():
+                    network = None
+                    continue
+            if not network:
+                self.log.warning(
+                    "Shade was unable to find a floating IPv4 network"
+                    " that is not set as internal. Please check your"
+                    " clouds.yaml configuration. Falling back to using"
+                    " first available network.")
             f_ip = self.create_floating_ip(
-                server=server, wait=wait, timeout=timeout)
+                network=network, server=server, wait=wait, timeout=timeout)
             timeout = timeout - (time.time() - start_time)
             if server:
                 # This gets passed in for both nova and neutron
